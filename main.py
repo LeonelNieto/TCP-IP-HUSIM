@@ -3,6 +3,7 @@ import subprocess
 import psutil
 import time
 import configparser
+from toe8951 import *
 
 config = configparser.ConfigParser()
 config.read('config.ini')
@@ -12,7 +13,9 @@ IP                    = config['HUSIM']['IP_ADDRESS']
 TCP_PORT              = int( config['HUSIM']['TCP_PORT'] )
 HUSIM_PATH            = config['HUSIM']['PATH']
 HUSIM_COM_PORT        = int( config['HUSIM']['COM_PORT'] )
-
+POWER_SUPPLY_COM_PORT = config['POWER_SUPPLY']['COM_PORT']
+POWER_SUPPLY_VOLTAGE  = config['POWER_SUPPLY']['VOLTAGE']
+POWER_SUPPLY_CURRENT  = config['POWER_SUPPLY']['CURRENT']
 
 def readMultiFrame(command, timeout=0.2):
     raw_data = ""
@@ -33,12 +36,19 @@ def readMultiFrame(command, timeout=0.2):
     except Exception as e:
         return raw_data
 
+####################  INIT POWER SUPPLY  ####################
+reference_time = time.time( )
+init_comPort( POWER_SUPPLY_COM_PORT )
+init_powerSupply( )
+set_voltage( POWER_SUPPLY_VOLTAGE )
+set_max_current( POWER_SUPPLY_CURRENT )
 
 ####################  OPEN HUSIM AND GET PID APP  ####################
 print( "Abriendo HUSIM..." )
 process = subprocess.Popen( HUSIM_PATH )
 pid = process.pid
 print( pid )
+turn_ON_powerSupply( )
 time.sleep( 1.5 )
 print( "Se ha abierto correctamente la aplicación de HUSIM" )
 
@@ -72,8 +82,10 @@ try:
     ####################  CLOSE HUSIM APP  ####################
     s.close()
     time.sleep( 0.2 )
+    turn_OFF_powerSupply( )
     proc = psutil.Process( pid )
     proc.terminate( )
+    Close_Power_Supply_COM_Port( )
     current_time = time.time( )
     cycle_time = current_time - reference_time
     print(f"Cycle time: {cycle_time} s")
@@ -81,6 +93,8 @@ try:
 except Exception as e:
     s.close( )
     time.sleep( 0.2 )
+    turn_OFF_powerSupply( )
     proc = psutil.Process( pid )
     proc.terminate( )
     print( e )
+    Close_Power_Supply_COM_Port( )
